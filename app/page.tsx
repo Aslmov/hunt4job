@@ -4,7 +4,7 @@ import ThemeToggle from "./components/ThemeToggle";
 import Link from "next/link";
 import ROUTES from "@/app/utils/routes";
 
-export default function HomePage() {
+export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 to-white dark:from-slate-900 dark:to-black text-slate-900 dark:text-blue-100 flex flex-col items-center justify-center p-8 font-sans transition-colors duration-300">
       <ThemeToggle />
