@@ -40,15 +40,50 @@ export const dbService = {
     }
   },
 
+
+  async createOrUpdateUserProfile(uid: string, userData: any) {
+    try {
+      const userRef = doc(db, 'users', uid);
+      const userDoc = await getDoc(userRef);
+
+      if (!userDoc.exists()) {
+        await setDoc(userRef, {
+          uid,
+          ...userData,
+          createdAt: new Date(),
+          lastLogin: new Date(),
+        });
+      } else {
+        await updateDoc(userRef, {
+          ...userData,
+          lastLogin: new Date(),
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de la création/mise à jour du profil:', error);
+      throw error;
+    }
+  },
+
   async updateUserLastLogin(uid: string) {
     try {
       const userRef = doc(db, 'users', uid);
-      await updateDoc(userRef, {
-        lastLogin: new Date()
-      });
+      const userDoc = await getDoc(userRef);
+
+      if (!userDoc.exists()) {
+        await setDoc(userRef, {
+          uid,
+          createdAt: new Date(),
+          lastLogin: new Date(),
+        });
+      } else {
+        await updateDoc(userRef, {
+          lastLogin: new Date(),
+        });
+      }
     } catch (error) {
       console.error('Erreur lors de la mise à jour de la dernière connexion:', error);
       throw error;
     }
-  }
+  },
 }; 

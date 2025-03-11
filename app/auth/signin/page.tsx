@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence } from "firebase/auth";
+import { useState, useEffect } from "react";
+import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence, onAuthStateChanged } from "firebase/auth";
 import { auth, dbService } from "@/app/lib/firebase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -17,6 +17,29 @@ export default function SignInPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  useEffect(() => {
+    const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
+    const savedEmail = localStorage.getItem('userEmail');
+    
+    if (savedRememberMe && savedEmail) {
+      setRememberMe(true);
+      setFormData(prev => ({
+        ...prev,
+        email: savedEmail
+      }));
+    }
+  }, []); 
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        router.push(ROUTES.DASHBOARD);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -32,18 +55,29 @@ export default function SignInPage() {
       );
 
       if (userCredential.user) {
-        await dbService.updateUserLastLogin(userCredential.user.uid);
-        const userData = await dbService.getUserData(userCredential.user.uid);
+        try {
+          // Créer ou mettre à jour le profil utilisateur
+          await dbService.createUserProfile(userCredential.user, {
+            email: userCredential.user.email,
+            displayName: userCredential.user.displayName,
+            photoURL: userCredential.user.photoURL,
+          });
 
-        if (rememberMe) {
-          localStorage.setItem('rememberMe', 'true');
-          localStorage.setItem('userEmail', formData.email);
-          if (userData) {
-            localStorage.setItem('userData', JSON.stringify(userData));
+          if (rememberMe) {
+            localStorage.setItem('rememberMe', 'true');
+            localStorage.setItem('userEmail', formData.email);
+          } else {
+            localStorage.removeItem('rememberMe');
+            localStorage.removeItem('userEmail');
           }
+          console.log("Connexion réussie:", userCredential.user);
+          console.log("Redirection vers le tableau de bord");
+          router.push(ROUTES.DASHBOARD);
+        } catch (profileError) {
+          console.error("Erreur lors de la mise à jour du profil:", profileError);
+          // Continuer la navigation même si la mise à jour du profil échoue
+          router.push(ROUTES.DASHBOARD);
         }
-
-        router.push(ROUTES.DASHBOARD);
       }
     } catch (err: any) {
       console.error("Erreur de connexion:", err);
@@ -67,20 +101,6 @@ export default function SignInPage() {
       setIsLoading(false);
     }
   };
-
-  // Vérifier et charger les informations sauvegardées au chargement du composant
-  useState(() => {
-    const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
-    const savedEmail = localStorage.getItem('userEmail');
-    
-    if (savedRememberMe && savedEmail) {
-      setRememberMe(true);
-      setFormData(prev => ({
-        ...prev,
-        email: savedEmail
-      }));
-    }
-  }, );
 
   // Fonction de test
   const testFirebase = async () => {
@@ -251,7 +271,8 @@ export default function SignInPage() {
         >
           Tester Firebase
         </button>
+     
       </main>
     </div>
   );
-} 
+}

@@ -5,6 +5,7 @@ import { auth, db } from "@/app/providers/firebase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ROUTES from "@/app/utils/routes";
+import { dbService } from "@/app/lib/firebase";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -71,6 +72,13 @@ export default function SignUpPage() {
           displayName: formData.fullName
         });
 
+        // Créer le profil utilisateur dans Firestore
+        await dbService.createUserProfile(userCredential.user, {
+          email: formData.email,
+          displayName: formData.fullName,
+          createdAt: new Date(),
+        });
+        
         router.push(ROUTES.DASHBOARD);
       }
     } catch (err: any) {

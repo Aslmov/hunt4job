@@ -34,9 +34,10 @@ export default function Home() {
             Commencer maintenant
           </Link>
           <Link
-            href={ROUTES.DEMO}
+            href={ROUTES.DASHBOARD}
             className="border border-blue-400 text-blue-400 px-8 py-3 rounded-lg hover:bg-blue-400/10 transition-all duration-300"
           >
+             
             Voir la démo
           </Link>
         </div>
