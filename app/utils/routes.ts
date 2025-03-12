@@ -25,7 +25,7 @@ const ROUTES: Routes = {
   FORGOT_PASSWORD: '/forgot-password',
 
   // Pages protégées
-  DASHBOARD: '/dashboard/dashboard',
+  DASHBOARD: '/dashboard',
   PROFILE: '/profile',
   SEARCH: '/search',
   APPLICATIONS: '/applications',

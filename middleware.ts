@@ -4,17 +4,41 @@ import ROUTES from '@/app/utils/routes';
 
 export function middleware(request: NextRequest) {
   // Vérifier le token d'authentification dans les cookies
-  const token = request.cookies.get('auth_token')?.value;
-  const isAuthenticated = !!token;
+  const authToken = request.cookies.get('auth_token')?.value;
+  const firebaseToken = request.cookies.get('firebase_token')?.value;
+  const isAuthenticated = !!authToken && !!firebaseToken;
   
   const path = request.nextUrl.pathname;
   
-  // Utiliser les fonctions utilitaires de ROUTES
-  if (ROUTES.isProtectedRoute(path) && !isAuthenticated) {
+  // Liste des routes publiques (ne nécessitant pas d'authentification)
+  const publicRoutes = [
+    ROUTES.SIGN_IN,
+    ROUTES.SIGN_UP,
+    ROUTES.FORGOT_PASSWORD,
+    '/'
+  ];
+
+  const isPublicRoute = publicRoutes.includes(path);
+  const isAuthRoute = path.startsWith('/auth/');
+
+  console.log('Middleware check:', {
+    path,
+    isAuthenticated,
+    isPublicRoute,
+    isAuthRoute,
+    authToken: !!authToken,
+    firebaseToken: !!firebaseToken
+  });
+
+  // Redirection pour les utilisateurs non authentifiés
+  if (!isAuthenticated && !isPublicRoute && !isAuthRoute) {
+    console.log('Utilisateur non authentifié, redirection vers login');
     return NextResponse.redirect(new URL(ROUTES.SIGN_IN, request.url));
   }
 
-  if (ROUTES.isPublicRoute(path) && isAuthenticated) {
+  // Redirection pour les utilisateurs authentifiés essayant d'accéder aux pages d'auth
+  if (isAuthenticated && (isPublicRoute || isAuthRoute)) {
+    console.log('Utilisateur authentifié, redirection vers dashboard');
     return NextResponse.redirect(new URL(ROUTES.DASHBOARD, request.url));
   }
 
@@ -23,6 +47,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
     '/dashboard/:path*',
     '/profile/:path*',
     '/search/:path*',
@@ -30,4 +55,4 @@ export const config = {
     '/interviews/:path*',
     '/auth/:path*',
   ],
-}; 
+};

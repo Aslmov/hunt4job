@@ -31,14 +31,30 @@ export default function SignInPage() {
   }, []); 
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        router.push(ROUTES.DASHBOARD);
-      }
-    });
+    const checkAuth = async () => {
+      try {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            console.log("Utilisateur déjà authentifié, ID:", user.uid);
+            const token = await user.getIdToken();
+            
+            // Définir les cookies avec une date d'expiration
+            document.cookie = `auth_token=${user.uid}; path=/; max-age=3600`;
+            document.cookie = `firebase_token=${token}; path=/; max-age=3600`;
+            
+            // Force la redirection
+            window.location.href = ROUTES.DASHBOARD;
+          }
+        });
 
-    return () => unsubscribe();
-  }, [router]);
+        return () => unsubscribe();
+      } catch (error) {
+        console.error("Erreur lors de la vérification de l'authentification:", error);
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,12 +72,17 @@ export default function SignInPage() {
 
       if (userCredential.user) {
         try {
-          // Créer ou mettre à jour le profil utilisateur
           await dbService.createUserProfile(userCredential.user, {
             email: userCredential.user.email,
             displayName: userCredential.user.displayName,
             photoURL: userCredential.user.photoURL,
           });
+
+          const token = await userCredential.user.getIdToken();
+          
+          // Définir les cookies avec une date d'expiration
+          document.cookie = `auth_token=${userCredential.user.uid}; path=/; max-age=3600`;
+          document.cookie = `firebase_token=${token}; path=/; max-age=3600`;
 
           if (rememberMe) {
             localStorage.setItem('rememberMe', 'true');
@@ -70,30 +91,26 @@ export default function SignInPage() {
             localStorage.removeItem('rememberMe');
             localStorage.removeItem('userEmail');
           }
-          console.log("Connexion réussie:", userCredential.user);
-          console.log("Redirection vers le tableau de bord");
-          router.push(ROUTES.DASHBOARD);
+          
+          // Forcer la redirection
+          window.location.href = ROUTES.DASHBOARD;
         } catch (profileError) {
           console.error("Erreur lors de la mise à jour du profil:", profileError);
-          // Continuer la navigation même si la mise à jour du profil échoue
-          router.push(ROUTES.DASHBOARD);
         }
       }
     } catch (err: any) {
       console.error("Erreur de connexion:", err);
       switch (err.code) {
-        case "auth/invalid-email":
-          setError("Adresse email invalide");
-          break;
+        case "auth/invalid-credential":
+          setError("Informations de connexion invalides");
+          break
         case "auth/user-disabled":
           setError("Ce compte a été désactivé");
           break;
         case "auth/user-not-found":
           setError("Aucun compte ne correspond à cet email");
           break;
-        case "auth/wrong-password":
-          setError("Email ou mot de passe incorrect");
-          break;
+    
         default:
           setError("Une erreur est survenue lors de la connexion");
       }
